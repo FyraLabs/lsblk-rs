@@ -8,18 +8,18 @@ pub enum LsblkError {
     StripPrefix(#[from] std::path::StripPrefixError),
 }
 
-fn ls_symlinks(dir: &std::path::Path) -> Result<HashMap<String, String>, crate::LsblkError> {
-    let mut result = HashMap::new();
-    for f in std::fs::read_dir(dir)?.filter_map(|f| f.ok()) {
-        if !f.metadata().is_ok_and(|f| f.is_symlink()) {
-            continue;
-        }
-        let target = std::fs::read_link(f.path())?;
-        let target = target.strip_prefix("/dev/")?.to_string_lossy().to_string();
-        let source = f.file_name().to_string_lossy().to_string();
-        result.insert(target, source);
-    }
-    Ok(result)
+fn ls_symlinks(
+    dir: &std::path::Path,
+) -> std::io::Result<impl Iterator<Item = Result<(String, String), LsblkError>>> {
+    Ok(std::fs::read_dir(dir)?
+        .filter_map(|f| f.ok())
+        .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
+        .map(|f| {
+            let target = std::fs::read_link(f.path())?;
+            let target = target.strip_prefix("/dev/")?.to_string_lossy().to_string();
+            let source = f.file_name().to_string_lossy().to_string();
+            Ok((target, source))
+        }))
 }
 
 #[derive(Debug, Clone, Default)]
@@ -36,13 +36,12 @@ pub struct BlockDevice {
 
 impl BlockDevice {
     #[must_use]
-    pub fn list() -> Result<Vec<Self>, crate::LsblkError> {
+    pub fn list() -> Result<Vec<Self>, LsblkError> {
         let mut result = HashMap::new();
         macro_rules! insert {
             ($kind:ident) => {
-                for (name, blk) in
-                    ls_symlinks(&PathBuf::from(concat!("/dev/disk/by-", stringify!($kind))))?
-                {
+                for x in ls_symlinks(&PathBuf::from(concat!("/dev/disk/by-", stringify!($kind))))? {
+                    let (name, blk) = x?;
                     if let Some(bd) = result.get_mut(&name) {
                         bd.$kind = Some(blk);
                     } else {
@@ -58,7 +57,8 @@ impl BlockDevice {
                 }
             };
         }
-        for (name, blk) in ls_symlinks(&PathBuf::from("/dev/disk/by-diskseq/"))? {
+        for x in ls_symlinks(&PathBuf::from("/dev/disk/by-diskseq/"))? {
+            let (name, blk) = x?;
             result.insert(
                 name.to_string(), // FIXME: clone shouldn't be needed theoretically
                 Self {
