@@ -2,6 +2,14 @@
 name = "lsblk"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["madonuko <mado@fyralabs.com>"]
+categories = ["filesystem"]
+keywords = ["lsblk", "disks", "partitions"]
+description = "List out block-devices, including disks and partitions"
+repository = "https://github.com/FyraLabs/lsblk-rs"
+homepage = "https://github.com/FyraLabs/lsblk-rs"
+documentation = "https://docs.rs/lsblk-rs"
 
 [dependencies]
 thiserror = "1.0.61"
