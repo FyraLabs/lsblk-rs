@@ -22,19 +22,38 @@ fn ls_symlinks(
         }))
 }
 
+/// A representation of a block-device
 #[derive(Debug, Clone, Default)]
 pub struct BlockDevice {
+    /// the filename of the block-device.
+    ///
+    /// If the drive is deemed to be storage by the kernel, this is usually prefixed by one of the
+    /// followings:
+    /// - `sd`
+    /// - `hd`
+    /// - `vd`
+    /// - `nvme`
+    /// - `mmcblk`
+    /// - `loop`
     pub name: String,
+    /// The diskseq of the device as in `/dev/disk/by-diskseq/`.
     pub diskseq: Option<String>,
+    /// The path (not the filesystem!) of the device as in `/dev/disk/by-path`.
     pub path: Option<String>,
+    /// The device UUID.
     pub uuid: Option<String>,
+    /// The UUID of a partition (not the same as device UUID).
     pub partuuid: Option<String>,
+    /// The label of the partition.
     pub label: Option<String>,
+    /// The partition label (not the same as `label`), as in `/dev/disk/by-partlabel`)
     pub partlabel: Option<String>,
+    /// The id of the device as in `/dev/disk/by-id/`.
     pub id: Option<String>,
 }
 
 impl BlockDevice {
+    /// List out all found block devices and populate all fields.
     #[must_use]
     pub fn list() -> Result<Vec<Self>, LsblkError> {
         let mut result = HashMap::new();
@@ -77,6 +96,7 @@ impl BlockDevice {
         Ok(result.into_values().collect())
     }
 
+    /// Returns true if and only if the device is a storage disk and is not a partition.
     #[must_use]
     pub fn is_disk(&self) -> bool {
         !self.is_part()
@@ -88,6 +108,12 @@ impl BlockDevice {
                 || self.name.starts_with("loop"))
     }
 
+    /// Returns true if and only if the device is a partition.
+    ///
+    /// The implementation currently is just:
+    /// ```rs
+    /// self.uuid.is_some()
+    /// ```
     #[must_use]
     pub fn is_part(&self) -> bool {
         self.uuid.is_some()
