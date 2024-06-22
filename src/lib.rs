@@ -16,7 +16,7 @@ fn ls_symlinks(
         .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
         .map(|f| {
             let target = std::fs::read_link(f.path())?;
-            let target = target.strip_prefix("/dev/")?.to_string_lossy().to_string();
+            let target = target.strip_prefix("../../")?.to_string_lossy().to_string();
             let source = f.file_name().to_string_lossy().to_string();
             Ok((target, source))
         }))
@@ -119,3 +119,11 @@ impl BlockDevice {
         self.uuid.is_some()
     }
 }
+
+#[cfg(test)]
+#[cfg(target_os = "linux")]
+#[test]
+fn test_lsblk_smoke() {
+    BlockDevice::list().expect("Valid lsblk");
+}
+
