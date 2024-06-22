@@ -54,7 +54,6 @@ pub struct BlockDevice {
 
 impl BlockDevice {
     /// List out all found block devices and populate all fields.
-    #[must_use]
     pub fn list() -> Result<Vec<Self>, LsblkError> {
         let mut result = HashMap::new();
         macro_rules! insert {
@@ -126,4 +125,3 @@ impl BlockDevice {
 fn test_lsblk_smoke() {
     BlockDevice::list().expect("Valid lsblk");
 }
-
