@@ -10,13 +10,13 @@ pub enum LsblkError {
 
 fn ls_symlinks(
     dir: &std::path::Path,
-) -> std::io::Result<impl Iterator<Item = Result<(String, String), LsblkError>>> {
+) -> std::io::Result<impl Iterator<Item = Result<(PathBuf, String), LsblkError>> + '_> {
     Ok(std::fs::read_dir(dir)?
         .filter_map(|f| f.ok())
         .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
         .map(|f| {
             let target = std::fs::read_link(f.path())?;
-            let target = target.strip_prefix("../../")?.to_string_lossy().to_string();
+            let target = dir.join(target).canonicalize()?;
             let source = f.file_name().to_string_lossy().to_string();
             Ok((target, source))
         }))
@@ -36,6 +36,8 @@ pub struct BlockDevice {
     /// - `mmcblk`
     /// - `loop`
     pub name: String,
+    /// The full name of the block-device, which is basically `/dev/{name}`.
+    pub fullname: PathBuf,
     /// The diskseq of the device as in `/dev/disk/by-diskseq/`.
     pub diskseq: Option<String>,
     /// The path (not the filesystem!) of the device as in `/dev/disk/by-path`.
@@ -59,7 +61,12 @@ impl BlockDevice {
         macro_rules! insert {
             ($kind:ident) => {
                 for x in ls_symlinks(&PathBuf::from(concat!("/dev/disk/by-", stringify!($kind))))? {
-                    let (name, blk) = x?;
+                    let (fullname, blk) = x?;
+                    let name = fullname
+                        .strip_prefix("/dev/")
+                        .expect("Cannot strip /dev")
+                        .to_string_lossy()
+                        .to_string();
                     if let Some(bd) = result.get_mut(&name) {
                         bd.$kind = Some(blk);
                     } else {
@@ -67,6 +74,7 @@ impl BlockDevice {
                             name.to_string(),
                             Self {
                                 name,
+                                fullname,
                                 $kind: Some(blk),
                                 ..Self::default()
                             },
@@ -76,11 +84,17 @@ impl BlockDevice {
             };
         }
         for x in ls_symlinks(&PathBuf::from("/dev/disk/by-diskseq/"))? {
-            let (name, blk) = x?;
+            let (fullname, blk) = x?;
+            let name = fullname
+                .strip_prefix("/dev/")
+                .expect("Cannot strip /dev")
+                .to_string_lossy()
+                .to_string();
             result.insert(
                 name.to_string(), // FIXME: clone shouldn't be needed theoretically
                 Self {
                     name,
+                    fullname,
                     diskseq: Some(blk),
                     ..BlockDevice::default()
                 },
