@@ -74,10 +74,10 @@ pub struct BlockDevice {
 
 impl BlockDevice {
     /// List out all found block devices and populate all fields.
-    /// 
+    ///
     /// # Panics
     /// If somehow there exists a device that isn't in `/dev/`, the function panics.
-    /// 
+    ///
     /// # Errors
     /// There are no particular errors other than IO / symlink resolution failures, etc.
     pub fn list() -> Result<Vec<Self>, LsblkError> {
@@ -143,6 +143,24 @@ impl BlockDevice {
                 || self.name.starts_with("nvme")
                 || self.name.starts_with("mmcblk")
                 || self.name.starts_with("loop"))
+    }
+
+    /// Determines if the block-device is considered to be physical.
+    /// This can be a partition or a disk.
+    ///
+    /// A "physical" disk has a name that starts with one of the followings:
+    /// - `sd`
+    /// - `hd`
+    /// - `vd`
+    /// - `nvme`
+    /// - `mmcblk`
+    #[must_use]
+    pub fn is_physical(&self) -> bool {
+        self.name.starts_with("sd")
+            || self.name.starts_with("hd")
+            || self.name.starts_with("vd")
+            || self.name.starts_with("nvme")
+            || self.name.starts_with("mmcblk")
     }
 
     /// Returns true if and only if the device is a partition.
