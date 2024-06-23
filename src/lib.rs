@@ -10,7 +10,6 @@
 #![warn(clippy::missing_panics_doc)]
 #![warn(clippy::missing_safety_doc)]
 #![warn(clippy::unwrap_used)]
-#![warn(clippy::expect_used)]
 #![warn(clippy::format_push_string)]
 #![warn(clippy::get_unwrap)]
 #![allow(clippy::missing_inline_in_public_items)]
@@ -31,7 +30,7 @@ fn ls_symlinks(
     dir: &std::path::Path,
 ) -> std::io::Result<impl Iterator<Item = Result<(PathBuf, String), LsblkError>> + '_> {
     Ok(std::fs::read_dir(dir)?
-        .filter_map(|f| f.ok())
+        .filter_map(std::result::Result::ok)
         .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
         .map(|f| {
             let target = std::fs::read_link(f.path())?;
@@ -75,6 +74,12 @@ pub struct BlockDevice {
 
 impl BlockDevice {
     /// List out all found block devices and populate all fields.
+    /// 
+    /// # Panics
+    /// If somehow there exists a device that isn't in `/dev/`, the function panics.
+    /// 
+    /// # Errors
+    /// There are no particular errors other than IO / symlink resolution failures, etc.
     pub fn list() -> Result<Vec<Self>, LsblkError> {
         let mut result = HashMap::new();
         macro_rules! insert {
@@ -115,7 +120,7 @@ impl BlockDevice {
                     name,
                     fullname,
                     diskseq: Some(blk),
-                    ..BlockDevice::default()
+                    ..Self::default()
                 },
             );
         }
@@ -147,7 +152,7 @@ impl BlockDevice {
     /// self.uuid.is_some()
     /// ```
     #[must_use]
-    pub fn is_part(&self) -> bool {
+    pub const fn is_part(&self) -> bool {
         self.uuid.is_some()
     }
 }
