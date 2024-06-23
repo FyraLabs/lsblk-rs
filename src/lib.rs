@@ -1,3 +1,6 @@
+//! A library that lists out block-devices.
+//! 
+//! Check out [`BlockDevice::list`].
 #![warn(clippy::complexity)]
 #![warn(clippy::correctness)]
 #![warn(clippy::nursery)]
