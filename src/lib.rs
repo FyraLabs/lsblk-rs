@@ -25,19 +25,23 @@ use std::{collections::HashMap, path::PathBuf};
 pub enum LsblkError {
     #[error("I/O Error: {0}")]
     Io(#[from] std::io::Error),
-    #[error("Fail to strip prefix `/dev/` from path")]
-    StripPrefix(#[from] std::path::StripPrefixError),
+    #[error("Cannot canonicalize broken symlink for {0:?}: {1}")]
+    BadSymlink(PathBuf, std::io::Error),
 }
+
+type Err = LsblkError;
 
 fn ls_symlinks(
     dir: &std::path::Path,
-) -> std::io::Result<impl Iterator<Item = Result<(PathBuf, String), LsblkError>> + '_> {
+) -> std::io::Result<impl Iterator<Item = Result<(PathBuf, String), Err>> + '_> {
     Ok(std::fs::read_dir(dir)?
-        .filter_map(std::result::Result::ok)
+        .filter_map(Result::ok)
         .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
         .map(|f| {
-            let target = std::fs::read_link(f.path())?;
-            let target = dir.join(target).canonicalize()?;
+            let target = f
+                .path()
+                .canonicalize() // this also resolves the symlink
+                .map_err(|e| Err::BadSymlink(f.path(), e))?;
             let source = f.file_name().to_string_lossy().to_string();
             Ok((target, source))
         }))
