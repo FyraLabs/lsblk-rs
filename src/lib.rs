@@ -23,28 +23,32 @@ use std::{collections::HashMap, path::PathBuf};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LsblkError {
-    #[error("I/O Error: {0}")]
-    Io(#[from] std::io::Error),
+    #[error("Cannot read directory {0:?}: {1}")]
+    ReadDir(PathBuf, std::io::Error),
     #[error("Cannot canonicalize broken symlink for {0:?}: {1}")]
     BadSymlink(PathBuf, std::io::Error),
 }
 
-type Err = LsblkError;
+type Res<T> = Result<T, LsblkError>;
+type ItRes<T> = dyn Iterator<Item = Res<T>>;
 
-fn ls_symlinks(
-    dir: &std::path::Path,
-) -> std::io::Result<impl Iterator<Item = Result<(PathBuf, String), Err>> + '_> {
-    Ok(std::fs::read_dir(dir)?
-        .filter_map(Result::ok)
-        .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
-        .map(|f| {
-            let target = f
-                .path()
-                .canonicalize() // this also resolves the symlink
-                .map_err(|e| Err::BadSymlink(f.path(), e))?;
-            let source = f.file_name().to_string_lossy().to_string();
-            Ok((target, source))
-        }))
+fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
+    Ok(if dir.exists() {
+        Box::new(
+            std::fs::read_dir(dir)
+                .map_err(|e| LsblkError::ReadDir(dir.to_path_buf(), e))?
+                .filter_map(Result::ok)
+                .filter(|f| f.metadata().is_ok_and(|f| f.is_symlink()))
+                .map(|f| {
+                    let dest = (f.path().canonicalize()) // this also resolves the symlink
+                        .map_err(|e| LsblkError::BadSymlink(f.path(), e))?;
+                    let src = f.file_name().to_string_lossy().to_string();
+                    Ok((dest, src))
+                }),
+        )
+    } else {
+        Box::new(std::iter::empty())
+    })
 }
 
 /// A representation of a block-device
