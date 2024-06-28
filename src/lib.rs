@@ -55,15 +55,6 @@ fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
 #[derive(Debug, Clone, Default)]
 pub struct BlockDevice {
     /// the filename of the block-device.
-    ///
-    /// If the drive is deemed to be storage by the kernel, this is usually prefixed by one of the
-    /// followings:
-    /// - `sd`
-    /// - `hd`
-    /// - `vd`
-    /// - `nvme`
-    /// - `mmcblk`
-    /// - `loop`
     pub name: String,
     /// The full name of the block-device, which is basically `/dev/{name}`.
     pub fullname: PathBuf,
@@ -145,44 +136,39 @@ impl BlockDevice {
     }
 
     /// Returns true if and only if the device is a storage disk and is not a partition.
+    ///
+    /// The implementation currently is just:
+    /// ```rs
+    /// !self.is_part()
+    /// ```
     #[must_use]
-    pub fn is_disk(&self) -> bool {
+    pub const fn is_disk(&self) -> bool {
         !self.is_part()
-            && (self.name.starts_with("sd")
-                || self.name.starts_with("hd")
-                || self.name.starts_with("vd")
-                || self.name.starts_with("nvme")
-                || self.name.starts_with("mmcblk")
-                || self.name.starts_with("loop"))
     }
 
     /// Determines if the block-device is considered to be physical.
     /// This can be a partition or a disk.
     ///
-    /// A "physical" disk has a name that starts with one of the followings:
-    /// - `sd`
-    /// - `hd`
-    /// - `vd`
-    /// - `nvme`
-    /// - `mmcblk`
+    /// A "physical" disk is one that has a path as in `/dev/disk/by-path`
+    ///
+    /// The implementation currently is just:
+    /// ```rs
+    /// self.path.is_some()
+    /// ```
     #[must_use]
-    pub fn is_physical(&self) -> bool {
-        self.name.starts_with("sd")
-            || self.name.starts_with("hd")
-            || self.name.starts_with("vd")
-            || self.name.starts_with("nvme")
-            || self.name.starts_with("mmcblk")
+    pub const fn is_physical(&self) -> bool {
+        self.path.is_some()
     }
 
     /// Returns true if and only if the device is a partition.
     ///
     /// The implementation currently is just:
     /// ```rs
-    /// self.uuid.is_some()
+    /// self.partuuid.is_some()
     /// ```
     #[must_use]
     pub const fn is_part(&self) -> bool {
-        self.uuid.is_some()
+        self.partuuid.is_some()
     }
 }
 
