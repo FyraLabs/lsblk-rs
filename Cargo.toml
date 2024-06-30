@@ -12,4 +12,5 @@ homepage = "https://github.com/FyraLabs/lsblk-rs"
 documentation = "https://docs.rs/lsblk-rs"
 
 [dependencies]
+scanf = "1.2.1"
 thiserror = "1.0.61"

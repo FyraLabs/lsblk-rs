@@ -19,6 +19,9 @@
 #![allow(clippy::implicit_return)]
 #![allow(clippy::blanket_clippy_restriction_lints)]
 #![allow(clippy::pattern_type_mismatch)]
+pub mod mountpoints;
+pub use mountpoints::Mount;
+
 use std::{collections::HashMap, path::PathBuf};
 
 #[derive(thiserror::Error, Debug)]
@@ -27,10 +30,12 @@ pub enum LsblkError {
     ReadDir(PathBuf, std::io::Error),
     #[error("Cannot canonicalize broken symlink for {0:?}: {1}")]
     BadSymlink(PathBuf, std::io::Error),
+    #[error("Cannot read file content from {0:?}: {1}")]
+    ReadFile(PathBuf, std::io::Error),
 }
 
-type Res<T> = Result<T, LsblkError>;
-type ItRes<T> = dyn Iterator<Item = Res<T>>;
+pub(crate) type Res<T> = Result<T, LsblkError>;
+pub(crate) type ItRes<T> = dyn Iterator<Item = Res<T>>;
 
 fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
