@@ -24,16 +24,17 @@ impl Mount {
         .lines()
         .filter_map(Result::ok)
         .filter_map(|l| {
-            let (mut device, mut mountpoint, mut fstype, mut mountopts) =
-                (String::new(), PathBuf::new(), String::new(), String::new());
-            scanf::sscanf!(&l, "{} {} {} {} 0 0", device, mountpoint, fstype, mountopts)
-                .ok()
-                .map(|()| Mount {
-                    device,
-                    mountpoint,
-                    fstype,
-                    mountopts,
-                })
+            let [device, mountpoint, fstype, mountopts] =
+                l.trim_end_matches(" 0 0").split(' ').collect::<Vec<_>>()[..]
+            else {
+                return None;
+            };
+            Some(Mount {
+                device: device.into(),
+                mountpoint: mountpoint.into(),
+                fstype: fstype.into(),
+                mountopts: mountopts.into(),
+            })
         }))
     }
 }
