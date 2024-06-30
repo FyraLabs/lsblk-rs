@@ -24,16 +24,12 @@ impl Mount {
         .lines()
         .filter_map(Result::ok)
         .filter_map(|l| {
-            let [device, mountpoint, fstype, mountopts] =
-                l.trim_end_matches(" 0 0").split(' ').collect::<Vec<_>>()[..]
-            else {
-                return None;
-            };
+            let mut parts = l.trim_end_matches(" 0 0").split(' ');
             Some(Mount {
-                device: device.into(),
-                mountpoint: mountpoint.into(),
-                fstype: fstype.into(),
-                mountopts: mountopts.into(),
+                device: parts.next()?.into(),
+                mountpoint: parts.next()?.into(),
+                fstype: parts.next()?.into(),
+                mountopts: parts.next()?.into(),
             })
         }))
     }
