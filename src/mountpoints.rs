@@ -3,7 +3,7 @@ use std::{io::BufRead, path::PathBuf};
 use crate::Res;
 
 /// Represent a mountpoint
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Mount {
     /// The device name (either a path or something like zram0)
     pub device: String,
@@ -54,6 +54,31 @@ impl Mount {
                 mountopts: parts.next()?.into(),
             })
         }))
+    }
+    /// List out the mounting options (fs_mntopts).
+    ///
+    /// This returns an iterator of (key, optional value).
+    ///
+    /// # Examples
+    /// ```
+    /// let mountopts = String::from("rw,relatime,compress=zstd:1,ssd,discard=async,subvol=/root");
+    /// let m = lsblk::Mount {
+    ///     mountopts,
+    ///     ..lsblk::Mount::default()
+    /// };
+    /// let mut it = m.iter_mountopts();
+    /// assert_eq!(it.next(), Some(("rw", None)));
+    /// assert_eq!(it.next(), Some(("relatime", None)));
+    /// assert_eq!(it.next(), Some(("compress", Some("zstd:1"))));
+    /// assert_eq!(it.next(), Some(("ssd", None)));
+    /// assert_eq!(it.next(), Some(("discard", Some("async"))));
+    /// assert_eq!(it.next(), Some(("subvol", Some("/root"))));
+    /// assert_eq!(it.next(), None);
+    /// ```
+    pub fn iter_mountopts(&self) -> impl Iterator<Item = (&str, Option<&str>)> {
+        self.mountopts
+            .split(',')
+            .map(|x| x.split_once('=').map_or((x, None), |(k, v)| (k, Some(v))))
     }
 }
 
