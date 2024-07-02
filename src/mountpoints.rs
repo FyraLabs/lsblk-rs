@@ -38,16 +38,16 @@ impl Mount {
     /// }
     /// # Ok::<(), lsblk::LsblkError>(())
     /// ```
-    pub fn list() -> Res<impl Iterator<Item = Mount>> {
+    pub fn list() -> Res<impl Iterator<Item = Self>> {
         Ok(std::io::BufReader::new(
             std::fs::File::open(PathBuf::from("/proc/mounts"))
                 .map_err(|e| crate::LsblkError::ReadFile("/proc/mounts".into(), e))?,
         )
         .lines()
-        .filter_map(Result::ok)
+        .map_while(Result::ok)
         .filter_map(|l| {
             let mut parts = l.trim_end_matches(" 0 0").split(' ');
-            Some(Mount {
+            Some(Self {
                 device: parts.next()?.into(),
                 mountpoint: parts.next()?.into(),
                 fstype: parts.next()?.into(),
@@ -55,7 +55,7 @@ impl Mount {
             })
         }))
     }
-    /// List out the mounting options (fs_mntopts).
+    /// List out the mounting options (`fs_mntopts`).
     ///
     /// This returns an iterator of (key, optional value).
     ///
