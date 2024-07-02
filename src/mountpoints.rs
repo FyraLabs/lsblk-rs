@@ -12,7 +12,7 @@ pub struct Mount {
     /// Type of filesystem
     pub fstype: String,
     /// Mount options
-    pub mountopts: String,
+pub mountopts: String,
 }
 
 impl Mount {
