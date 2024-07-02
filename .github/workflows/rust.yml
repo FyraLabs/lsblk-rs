@@ -5,5 +5,5 @@ on:
   pull_request:
 
 jobs:
-  docker:
+  rust:
     uses: FyraLabs/actions/.github/workflows/rust.yml@main
