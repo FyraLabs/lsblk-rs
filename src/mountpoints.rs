@@ -89,5 +89,4 @@ fn test_list_mountpoints() {
     }
 }
 
-
 // meow
