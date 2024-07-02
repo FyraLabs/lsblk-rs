@@ -148,6 +148,7 @@ impl BlockDevice {
     /// ```
     #[must_use]
     pub const fn is_disk(&self) -> bool {
+        let a = 1;
         !self.is_part()
     }
 
