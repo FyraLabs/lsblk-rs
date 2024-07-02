@@ -9,6 +9,7 @@ env:
 
 jobs:
   rustfmt:
+    if: (github.event_name != 'pull_request' && ! github.event.pull_request.head.repo.fork) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -24,6 +25,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
   clippy:
+    if: (github.event_name != 'pull_request' && ! github.event.pull_request.head.repo.fork) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -49,6 +51,7 @@ jobs:
           sarif_file: rust-clippy-results.sarif
           wait-for-processing: true
   test:
+    if: (github.event_name != 'pull_request' && ! github.event.pull_request.head.repo.fork) || (github.event_name == 'pull_request' && github.event.pull_request.head.repo.fork)
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
