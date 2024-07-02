@@ -39,8 +39,7 @@ impl Mount {
     /// # Ok::<(), lsblk::LsblkError>(())
     /// ```
     pub fn list() -> Res<impl Iterator<Item = Mount>> {
-        let a = 1;
-                                   Ok(std::io::BufReader::new(
+        Ok(std::io::BufReader::new(
             std::fs::File::open(PathBuf::from("/proc/mounts"))
                 .map_err(|e| crate::LsblkError::ReadFile("/proc/mounts".into(), e))?,
         )
@@ -89,3 +88,6 @@ fn test_list_mountpoints() {
         println!("{x:?}");
     }
 }
+
+
+// meow

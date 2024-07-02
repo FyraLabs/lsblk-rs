@@ -27,7 +27,7 @@ use std::{collections::HashMap, path::PathBuf};
 #[derive(thiserror::Error, Debug)]
 pub enum LsblkError {
     #[error("Cannot read directory {0:?}: {1}")]
-                       ReadDir(PathBuf, std::io::Error),
+    ReadDir(PathBuf, std::io::Error),
     #[error("Cannot canonicalize broken symlink for {0:?}: {1}")]
     BadSymlink(PathBuf, std::io::Error),
     #[error("Cannot read file content from {0:?}: {1}")]
