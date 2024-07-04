@@ -182,8 +182,12 @@ impl BlockDevice {
     /// If the block-device is a partition, trim out the partition from name and return the
     /// name of the disk.
     ///
-    /// This function is **expensive** because IO is involved. Specifically, this function reads
+    /// This function is **_EXPENSIVE_** because IO is involved. Specifically, this function reads
     /// the content of the directory `/sys/block` for a list of disks.
+    ///
+    /// # Assumptions
+    /// - All disk names are UTF-8 compliant
+    /// - All files in the directory `/sys/block` (not recursively) are accessible.
     #[must_use]
     pub fn disk_name(&self) -> Option<String> {
         for disk in std::fs::read_dir(Path::new("/sys/block")).ok()? {
@@ -194,6 +198,32 @@ impl BlockDevice {
             }
         }
         None
+    }
+
+    /// Fetch the capacity of the block-device.
+    ///
+    /// This relies on `sysfs(5)`, i.e. the file system mounted at `/sys`.
+    ///
+    /// The returned value * 512 = size in bytes.
+    ///
+    /// # Errors
+    /// All IO-related failures (including UTF-8 parsing) will be stored in [`std::io::Error`]. If
+    /// the output is `Ok(None)`, that means there was a failure trying to parse the text inside
+    /// `/sys/block/<device>/size`.
+    ///
+    /// # Panics
+    /// A panic will be raised if there exists a partition identified via [`Self::is_part`] that
+    /// does not have a [`Self::disk_name`]. This assumes any partition should belong to a disk.
+    pub fn capacity(&self) -> std::io::Result<Option<u64>> {
+        let p = Path::new("/sys/block");
+        let p = if self.is_part() {
+            p.join(self.disk_name().expect("Can't determine disk of part"))
+                .join(&self.name)
+        } else {
+            p.join(&self.name)
+        };
+        let s = std::fs::read_to_string(p)?;
+        Ok(s.parse().ok())
     }
 }
 
