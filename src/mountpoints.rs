@@ -19,7 +19,7 @@ impl Mount {
     /// List out all mountpoints and populate all fields.
     ///
     /// # Errors
-    /// Since this function depends on the existance of `/proc/mounts`, failures to open the file
+    /// Since this function depends on the existence of `/proc/mounts`, failures to open the file
     /// will cause [`crate::LsblkError::ReadFile`].
     ///
     /// # Caveats
