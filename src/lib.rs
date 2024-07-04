@@ -15,10 +15,6 @@
 #![warn(clippy::unwrap_used)]
 #![warn(clippy::format_push_string)]
 #![warn(clippy::get_unwrap)]
-#![allow(clippy::missing_inline_in_public_items)]
-#![allow(clippy::implicit_return)]
-#![allow(clippy::blanket_clippy_restriction_lints)]
-#![allow(clippy::pattern_type_mismatch)]
 pub mod blockdevs;
 pub mod mountpoints;
 pub use blockdevs::BlockDevice;

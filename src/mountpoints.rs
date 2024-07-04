@@ -83,8 +83,9 @@ impl Mount {
 }
 
 #[test]
-fn test_list_mountpoints() {
-    for x in Mount::list().unwrap() {
+fn test_list_mountpoints() -> Res<()> {
+    for x in Mount::list()? {
         println!("{x:?}");
     }
+    Ok(())
 }
