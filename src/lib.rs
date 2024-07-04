@@ -22,7 +22,10 @@
 pub mod mountpoints;
 pub use mountpoints::Mount;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum LsblkError {
@@ -174,6 +177,23 @@ impl BlockDevice {
     #[must_use]
     pub const fn is_part(&self) -> bool {
         self.partuuid.is_some()
+    }
+
+    /// If the block-device is a partition, trim out the partition from name and return the
+    /// name of the disk.
+    ///
+    /// This function is **expensive** because IO is involved. Specifically, this function reads
+    /// the content of the directory `/sys/block` for a list of disks.
+    #[must_use]
+    pub fn disk_name(&self) -> Option<String> {
+        for disk in std::fs::read_dir(Path::new("/sys/block")).ok()? {
+            let diskname = disk.ok()?.file_name();
+            let diskname = diskname.to_str()?;
+            if self.name.starts_with(diskname) {
+                return Some(diskname.to_owned());
+            }
+        }
+        None
     }
 }
 
