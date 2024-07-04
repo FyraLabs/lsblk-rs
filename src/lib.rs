@@ -214,6 +214,7 @@ impl BlockDevice {
     /// # Panics
     /// A panic will be raised if there exists a partition identified via [`Self::is_part`] that
     /// does not have a [`Self::disk_name`]. This assumes any partition should belong to a disk.
+    #[must_use]
     pub fn capacity(&self) -> std::io::Result<Option<u64>> {
         let p = Path::new("/sys/block");
         let p = if self.is_part() {
@@ -224,7 +225,8 @@ impl BlockDevice {
         }
         .join("size");
         let s = std::fs::read_to_string(p)?;
-        Ok(s.parse().ok())
+        // remove new line char
+        Ok(s[..s.len() - 1].parse().ok())
     }
 }
 
@@ -232,5 +234,8 @@ impl BlockDevice {
 #[cfg(target_os = "linux")]
 #[test]
 fn test_lsblk_smoke() {
-    BlockDevice::list().expect("Valid lsblk");
+    let devs = BlockDevice::list().expect("Valid lsblk");
+    for dev in devs.iter().filter(|d| d.is_part()) {
+        let _ = dev.capacity().unwrap().unwrap();
+    }
 }
