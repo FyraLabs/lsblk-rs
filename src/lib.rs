@@ -221,7 +221,8 @@ impl BlockDevice {
                 .join(&self.name)
         } else {
             p.join(&self.name)
-        };
+        }
+        .join("size");
         let s = std::fs::read_to_string(p)?;
         Ok(s.parse().ok())
     }
