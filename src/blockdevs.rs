@@ -1,8 +1,5 @@
 use crate::{ItRes, LsblkError, Res};
-use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-};
+use std::{collections::HashMap, os::linux::fs::MetadataExt, path::PathBuf};
 
 fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
@@ -143,25 +140,45 @@ impl BlockDevice {
         self.partuuid.is_some()
     }
 
+    /// Get the sysfs path for this block device.
+    ///
+    /// This relies on `sysfs(5)`, i.e. the file system mounted at `/sys`.
+    ///
+    /// # Errors
+    /// All IO-related failures (including UTF-8 parsing) will be stored in [`std::io::Error`].
+    pub fn sysfs(&self) -> std::io::Result<PathBuf> {
+        let metadata = std::fs::metadata(&self.fullname)?;
+        // Contains what device this file represents
+        let rdev = metadata.st_rdev();
+
+        // Adapted from https://docs.rs/nix/0.29.0/src/nix/sys/stat.rs.html#191
+        let major = ((rdev >> 32) & 0xffff_f000) | ((rdev >> 8) & 0x0000_0fff);
+        let minor = ((rdev >> 12) & 0xffff_ff00) | ((rdev) & 0x0000_00ff);
+
+        Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/",)))
+    }
+
     /// If the block-device is a partition, trim out the partition from name and return the
     /// name of the disk.
     ///
-    /// This function is **_EXPENSIVE_** because IO is involved. Specifically, this function reads
-    /// the content of the directory `/sys/block` for a list of disks.
+    /// # Errors
+    /// All IO-related failures will be stored in [`std::io::Error`].
     ///
-    /// # Assumptions
-    /// - All disk names are UTF-8 compliant
-    /// - All files in the directory `/sys/block` (not recursively) are accessible.
-    #[must_use]
-    pub fn disk_name(&self) -> Option<String> {
-        for disk in std::fs::read_dir(Path::new("/sys/block")).ok()? {
-            let diskname = disk.ok()?.file_name();
-            let diskname = diskname.to_str()?;
-            if self.name.starts_with(diskname) {
-                return Some(diskname.to_owned());
-            }
-        }
-        None
+    /// # Panics
+    /// A panic will be raised if the disk name is not UTF-8 compliant, the parent path is invalid,
+    /// or if the function is called on a block device that is not a partition
+    pub fn disk_name(&self) -> std::io::Result<String> {
+        assert!(
+            self.is_part(),
+            "can't get disk name for a block device that is not a partition"
+        );
+        let parent = std::fs::canonicalize(self.sysfs()?.join(".."))?;
+        Ok(parent
+            .file_name()
+            .expect("file name is invalid, this shouldn't happen")
+            .to_str()
+            .expect("file name is not UTF-8 compliant")
+            .to_owned())
     }
 
     /// Fetch the capacity of the block-device.
@@ -174,19 +191,8 @@ impl BlockDevice {
     /// All IO-related failures (including UTF-8 parsing) will be stored in [`std::io::Error`]. If
     /// the output is `Ok(None)`, that means there was a failure trying to parse the text inside
     /// `/sys/block/<device>/size`.
-    ///
-    /// # Panics
-    /// A panic will be raised if there exists a partition identified via [`Self::is_part`] that
-    /// does not have a [`Self::disk_name`]. This assumes any partition should belong to a disk.
     pub fn capacity(&self) -> std::io::Result<Option<u64>> {
-        let p = Path::new("/sys/block");
-        let p = if self.is_part() {
-            p.join(self.disk_name().expect("Can't determine disk of part"))
-                .join(&self.name)
-        } else {
-            p.join(&self.name)
-        }
-        .join("size");
+        let p = self.sysfs()?.join("size");
         let s = std::fs::read_to_string(p)?;
         // remove new line char
         Ok(s[..s.len() - 1].parse().ok())
@@ -200,5 +206,7 @@ fn test_lsblk_smoke() {
     let devs = BlockDevice::list().expect("Valid lsblk");
     for dev in devs.iter().filter(|d| d.is_part()) {
         let _ = dev.capacity().unwrap().unwrap();
+        let _ = dev.sysfs().unwrap();
+        let _ = dev.disk_name().unwrap();
     }
 }
