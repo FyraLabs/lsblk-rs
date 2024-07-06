@@ -155,7 +155,7 @@ impl BlockDevice {
         let major = ((rdev >> 32) & 0xffff_f000) | ((rdev >> 8) & 0x0000_0fff);
         let minor = ((rdev >> 12) & 0xffff_ff00) | ((rdev) & 0x0000_00ff);
 
-        Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/",)))
+        Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/")))
     }
 
     /// If the block-device is a partition, trim out the partition from name and return the
