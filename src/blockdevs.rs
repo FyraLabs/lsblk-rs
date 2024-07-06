@@ -158,8 +158,8 @@ impl BlockDevice {
         Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/")))
     }
 
-    /// If the block-device is a partition, trim out the partition from name and return the
-    /// name of the disk.
+    /// If the block-device is a partition, look up the parent disk in sysfs and return its
+    /// name. Otherwise, returns [`BlockDevice::name`] if not a partition.
     ///
     /// # Errors
     /// All IO-related failures will be stored in [`std::io::Error`].
@@ -168,10 +168,7 @@ impl BlockDevice {
     /// A panic will be raised if the disk name is not UTF-8 compliant or if the parent path is invalid
     pub fn disk_name(&self) -> std::io::Result<String> {
         if !self.is_part() {
-            return Err(std::io::Error::new(
-                std::io::ErrorKind::Other,
-                "can't get disk name for a block device that is not a partition",
-            ));
+            return Ok(self.name.clone());
         }
 
         let parent = std::fs::canonicalize(self.sysfs()?.join(".."))?;
