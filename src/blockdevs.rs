@@ -165,13 +165,15 @@ impl BlockDevice {
     /// All IO-related failures will be stored in [`std::io::Error`].
     ///
     /// # Panics
-    /// A panic will be raised if the disk name is not UTF-8 compliant, the parent path is invalid,
-    /// or if the function is called on a block device that is not a partition
+    /// A panic will be raised if the disk name is not UTF-8 compliant or if the parent path is invalid
     pub fn disk_name(&self) -> std::io::Result<String> {
-        assert!(
-            self.is_part(),
-            "can't get disk name for a block device that is not a partition"
-        );
+        if !self.is_part() {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "can't get disk name for a block device that is not a partition",
+            ));
+        }
+
         let parent = std::fs::canonicalize(self.sysfs()?.join(".."))?;
         Ok(parent
             .file_name()
