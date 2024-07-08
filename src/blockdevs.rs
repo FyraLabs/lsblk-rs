@@ -1,7 +1,8 @@
 use crate::{ItRes, LsblkError, Res};
-use std::{collections::HashMap, os::linux::fs::MetadataExt, path::PathBuf};
+use std::os::linux::fs::MetadataExt;
+use std::path::{Path, PathBuf};
 
-fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
+fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
         Box::new(
             std::fs::read_dir(dir)
@@ -52,13 +53,10 @@ impl BlockDevice {
     /// # Errors
     /// There are no particular errors other than IO / symlink resolution failures, etc.
     pub fn list() -> Result<Vec<Self>, LsblkError> {
-        let mut result = HashMap::new();
+        let mut result = std::collections::HashMap::new();
         macro_rules! insert {
             ($kind:ident) => {
-                for x in ls_symlinks(std::path::Path::new(concat!(
-                    "/dev/disk/by-",
-                    stringify!($kind)
-                )))? {
+                for x in ls_symlinks(Path::new(concat!("/dev/disk/by-", stringify!($kind))))? {
                     let (fullname, blk) = x?;
                     let name = fullname
                         .strip_prefix("/dev/")
@@ -81,7 +79,7 @@ impl BlockDevice {
                 }
             };
         }
-        for x in ls_symlinks(std::path::Path::new("/dev/disk/by-diskseq/"))? {
+        for x in ls_symlinks(Path::new("/dev/disk/by-diskseq/"))? {
             let (fullname, blk) = x?;
             let name = fullname
                 .strip_prefix("/dev/")
