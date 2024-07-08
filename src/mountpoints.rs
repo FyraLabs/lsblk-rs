@@ -38,22 +38,25 @@ impl Mount {
     /// }
     /// # Ok::<(), lsblk::LsblkError>(())
     /// ```
+    #[rustfmt::skip] //? https://github.com/rust-lang/rustfmt/issues/3157#issuecomment-2213427895
     pub fn list() -> Res<impl Iterator<Item = Self>> {
-        Ok(std::io::BufReader::new(
-            std::fs::File::open(PathBuf::from("/proc/mounts"))
-                .map_err(|e| crate::LsblkError::ReadFile("/proc/mounts".into(), e))?,
-        )
-        .lines()
-        .map_while(Result::ok)
-        .filter_map(|l| {
-            let mut parts = l.trim_end_matches(" 0 0").split(' ');
-            Some(Self {
-                device: parts.next()?.into(),
-                mountpoint: parts.next()?.into(),
-                fstype: parts.next()?.into(),
-                mountopts: parts.next()?.into(),
+        Ok(
+            std::io::BufReader::new(
+                std::fs::File::open(PathBuf::from("/proc/mounts"))
+                    .map_err(|e| crate::LsblkError::ReadFile("/proc/mounts".into(), e))?,
+            )
+            .lines()
+            .map_while(Result::ok)
+            .filter_map(|l| {
+                let mut parts = l.trim_end_matches(" 0 0").split(' ');
+                Some(Self {
+                    device: parts.next()?.into(),
+                    mountpoint: parts.next()?.into(),
+                    fstype: parts.next()?.into(),
+                    mountopts: parts.next()?.into(),
+                })
             })
-        }))
+        )
     }
     /// List out the mounting options (`fs_mntopts`).
     ///

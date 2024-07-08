@@ -55,7 +55,7 @@ impl BlockDevice {
         let mut result = HashMap::new();
         macro_rules! insert {
             ($kind:ident) => {
-                for x in ls_symlinks(&PathBuf::from(concat!("/dev/disk/by-", stringify!($kind))))? {
+                for x in ls_symlinks(std::path::Path::new(concat!("/dev/disk/by-", stringify!($kind))))? {
                     let (fullname, blk) = x?;
                     let name = fullname
                         .strip_prefix("/dev/")
@@ -78,7 +78,7 @@ impl BlockDevice {
                 }
             };
         }
-        for x in ls_symlinks(&PathBuf::from("/dev/disk/by-diskseq/"))? {
+        for x in ls_symlinks(std::path::Path::new("/dev/disk/by-diskseq/"))? {
             let (fullname, blk) = x?;
             let name = fullname
                 .strip_prefix("/dev/")
