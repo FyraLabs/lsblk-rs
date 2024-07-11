@@ -148,7 +148,7 @@ impl BlockDevice {
     /// # Errors
     /// Failure to stat the device file using [`std::fs::metadata`] will result in [`std::io::Error`].
     pub fn sysfs(&self) -> std::io::Result<PathBuf> {
-        let (major, minor) = self.maj_min()?;
+        let (major, minor) = self.major_minor()?;
         Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/")))
     }
 
@@ -158,7 +158,7 @@ impl BlockDevice {
     ///
     /// # Errors
     /// Failure to stat the device file using [`std::fs::metadata`] will result in [`std::io::Error`].
-    pub fn maj_min(&self) -> std::io::Result<(u32, u32)> {
+    pub fn major_minor(&self) -> std::io::Result<(u32, u32)> {
         let metadata = std::fs::metadata(&self.fullname)?;
         // Contains what device this file represents
         let rdev = metadata.st_rdev();
