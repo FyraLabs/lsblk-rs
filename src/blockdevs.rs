@@ -1,7 +1,8 @@
 use crate::{ItRes, LsblkError, Res};
-use std::{collections::HashMap, os::linux::fs::MetadataExt, path::PathBuf};
+use std::os::linux::fs::MetadataExt;
+use std::path::{Path, PathBuf};
 
-fn ls_symlinks(dir: &std::path::Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
+fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
         Box::new(
             std::fs::read_dir(dir)
@@ -52,10 +53,10 @@ impl BlockDevice {
     /// # Errors
     /// There are no particular errors other than IO / symlink resolution failures, etc.
     pub fn list() -> Result<Vec<Self>, LsblkError> {
-        let mut result = HashMap::new();
+        let mut result = std::collections::HashMap::new();
         macro_rules! insert {
             ($kind:ident) => {
-                for x in ls_symlinks(&PathBuf::from(concat!("/dev/disk/by-", stringify!($kind))))? {
+                for x in ls_symlinks(Path::new(concat!("/dev/disk/by-", stringify!($kind))))? {
                     let (fullname, blk) = x?;
                     let name = fullname
                         .strip_prefix("/dev/")
@@ -78,7 +79,7 @@ impl BlockDevice {
                 }
             };
         }
-        for x in ls_symlinks(&PathBuf::from("/dev/disk/by-diskseq/"))? {
+        for x in ls_symlinks(Path::new("/dev/disk/by-diskseq/"))? {
             let (fullname, blk) = x?;
             let name = fullname
                 .strip_prefix("/dev/")
@@ -145,17 +146,28 @@ impl BlockDevice {
     /// This relies on `sysfs(5)`, i.e. the file system mounted at `/sys`.
     ///
     /// # Errors
-    /// All IO-related failures (including UTF-8 parsing) will be stored in [`std::io::Error`].
+    /// Failure to stat the device file using [`std::fs::metadata`] will result in [`std::io::Error`].
     pub fn sysfs(&self) -> std::io::Result<PathBuf> {
+        let (major, minor) = self.major_minor()?;
+        Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/")))
+    }
+
+    /// Get the major, minor ID of the block-device.
+    ///
+    /// This stats the device file in order to obtain its device ID.
+    ///
+    /// # Errors
+    /// Failure to stat the device file using [`std::fs::metadata`] will result in [`std::io::Error`].
+    pub fn major_minor(&self) -> std::io::Result<(u32, u32)> {
         let metadata = std::fs::metadata(&self.fullname)?;
         // Contains what device this file represents
         let rdev = metadata.st_rdev();
 
         // Adapted from https://docs.rs/nix/0.29.0/src/nix/sys/stat.rs.html#191
         let major = ((rdev >> 32) & 0xffff_f000) | ((rdev >> 8) & 0x0000_0fff);
-        let minor = ((rdev >> 12) & 0xffff_ff00) | ((rdev) & 0x0000_00ff);
-
-        Ok(PathBuf::from(format!("/sys/dev/block/{major}:{minor}/")))
+        let minor = ((rdev >> 12) & 0xffff_ff00) | (rdev & 0x0000_00ff);
+        #[allow(clippy::cast_possible_truncation)]
+        Ok((major as u32, minor as u32)) // guaranteed by bit filters
     }
 
     /// If the block-device is a partition, look up the parent disk in sysfs and return its
@@ -200,12 +212,13 @@ impl BlockDevice {
 
 #[cfg(test)]
 #[cfg(target_os = "linux")]
+#[allow(clippy::unwrap_used)]
 #[test]
 fn test_lsblk_smoke() {
     let devs = BlockDevice::list().expect("Valid lsblk");
     for dev in devs.iter().filter(|d| d.is_part()) {
-        let _ = dev.capacity().unwrap().unwrap();
-        let _ = dev.sysfs().unwrap();
-        let _ = dev.disk_name().unwrap();
+        println!("{}", dev.capacity().unwrap().unwrap());
+        println!("{:?}", dev.sysfs().unwrap());
+        println!("{}", dev.disk_name().unwrap());
     }
 }
