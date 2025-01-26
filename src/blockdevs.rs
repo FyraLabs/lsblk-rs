@@ -151,6 +151,8 @@ impl BlockDevice {
     /// This is the same as [`BlockDevice::from_path`] except that **none of the fields other than
     /// `name` and `fullname` are populated**.
     ///
+    /// To manually populate the fields, use [`crate::Populate`].
+    ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
     ///
