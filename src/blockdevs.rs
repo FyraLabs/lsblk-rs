@@ -2,7 +2,7 @@ use crate::{ItRes, LsblkError, Res};
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
+pub(crate) fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
         Box::new(
             std::fs::read_dir(dir)
@@ -113,8 +113,8 @@ impl BlockDevice {
     /// that links to `/dev/{name}`). Therefore, you should prefer [`BlockDevice::list()`] instead
     /// if you would like to list out more than 1 blockdevice.
     ///
-    /// If you would like to not populate all fields for now, you may choose to only populate some
-    /// of them
+    /// If you would like to not populate all fields for now, use
+    /// [`BlockDevice::from_path_unpopulated()`] instead.
     ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
@@ -148,8 +148,8 @@ impl BlockDevice {
     /// Create a [`BlockDevice`] from a path that is either `/dev/{name}` or a path to a (sym)link
     /// that points to `/dev/{name}`.
     ///
-    /// This is the same as [`BlockDevice::from_path`] except that none of the fields other than
-    /// `name` and `fullname` are populated.
+    /// This is the same as [`BlockDevice::from_path`] except that **none of the fields other than
+    /// `name` and `fullname` are populated**.
     ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
