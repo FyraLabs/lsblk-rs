@@ -33,3 +33,13 @@ macro_rules! generate_populate_trait {
 }
 
 generate_populate_trait!(Populate diskseq path uuid partuuid label partlabel id);
+
+impl Populate for BlockDevice {
+    fn as_mut(&mut self) -> &mut BlockDevice {
+        self
+    }
+
+    fn as_ref(&self) -> &BlockDevice {
+        self
+    }
+}
