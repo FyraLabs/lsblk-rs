@@ -1,6 +1,6 @@
 [package]
 name = "lsblk"
-version = "0.4.0"
+version = "0.4.1"
 edition = "2021"
 license = "MIT"
 authors = ["madonuko <mado@fyralabs.com>"]
@@ -12,4 +12,4 @@ homepage = "https://github.com/FyraLabs/lsblk-rs"
 documentation = "https://docs.rs/lsblk-rs"
 
 [dependencies]
-thiserror = "1.0.61"
+thiserror = "2.0.11"
