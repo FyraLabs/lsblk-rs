@@ -17,8 +17,10 @@
 #![warn(clippy::get_unwrap)]
 pub mod blockdevs;
 pub mod mountpoints;
+pub mod populate;
 pub use blockdevs::BlockDevice;
 pub use mountpoints::Mount;
+pub use populate::Populate;
 
 #[derive(thiserror::Error, Debug)]
 pub enum LsblkError {

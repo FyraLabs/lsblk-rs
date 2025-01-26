@@ -2,7 +2,7 @@ use crate::{ItRes, LsblkError, Res};
 use std::os::linux::fs::MetadataExt;
 use std::path::{Path, PathBuf};
 
-fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
+pub(crate) fn ls_symlinks(dir: &Path) -> Res<Box<ItRes<(PathBuf, String)>>> {
     Ok(if dir.exists() {
         Box::new(
             std::fs::read_dir(dir)
@@ -103,6 +103,81 @@ impl BlockDevice {
         insert!(partlabel);
         insert!(id);
         Ok(result.into_values().collect())
+    }
+
+    /// Create a [`BlockDevice`] from a path that is either `/dev/{name}` or a path to a (sym)link
+    /// that points to `/dev/{name}`.
+    ///
+    /// Note that this function is rather expensive (because it needs to list out all links in
+    /// `/dev/disks/by-diskseq/` and other directories in the worst case scenario to find the one
+    /// that links to `/dev/{name}`). Therefore, you should prefer [`BlockDevice::list()`] instead
+    /// if you would like to list out more than 1 blockdevice.
+    ///
+    /// If you would like to not populate all fields for now, use
+    /// [`BlockDevice::from_path_unpopulated()`] instead.
+    ///
+    /// # Panics
+    /// If somehow this isn't in `/dev/`, the function panics.
+    ///
+    /// # Errors
+    /// There are no particular errors other than IO / symlink resolution failures, etc.
+    pub fn from_path<P: AsRef<Path>>(p: P) -> Result<Self, LsblkError> {
+        let pathbuf = (p.as_ref().canonicalize())
+            .map_err(|e| LsblkError::BadSymlink(p.as_ref().to_owned(), e))?;
+        let mut res = Self::from_abs_path_unpopulated(pathbuf.clone());
+        macro_rules! insert {
+            ($kind:ident) => {
+                if let Some(Ok((_, blk))) =
+                    ls_symlinks(Path::new(concat!("/dev/disk/by-", stringify!($kind))))?
+                        .find(|elm| elm.as_ref().is_ok_and(|(fullname, _)| fullname == &pathbuf))
+                {
+                    res.$kind = Some(blk);
+                }
+            };
+        }
+        insert!(diskseq);
+        insert!(path);
+        insert!(uuid);
+        insert!(partuuid);
+        insert!(label);
+        insert!(partlabel);
+        insert!(id);
+        Ok(res)
+    }
+
+    /// Create a [`BlockDevice`] from a path that is either `/dev/{name}` or a path to a (sym)link
+    /// that points to `/dev/{name}`.
+    ///
+    /// This is the same as [`BlockDevice::from_path`] except that **none of the fields other than
+    /// `name` and `fullname` are populated**.
+    ///
+    /// # Panics
+    /// If somehow this isn't in `/dev/`, the function panics.
+    ///
+    /// # Errors
+    /// The function returns an error if the path cannot be canonicalized.
+    pub fn from_path_unpopulated<P: AsRef<Path>>(p: P) -> std::io::Result<Self> {
+        Ok(Self::from_abs_path_unpopulated(p.as_ref().canonicalize()?))
+    }
+
+    /// Create a [`BlockDevice`] from a path in the format of `/dev/{name}`.
+    ///
+    /// WARN: This function does NOT accept links or relative paths.
+    /// If this is unacceptable, use [`BlockDevice::from_path_unpopulated`] instead.
+    ///
+    /// # Panics
+    /// If somehow this isn't in `/dev/`, the function panics.
+    #[must_use]
+    pub fn from_abs_path_unpopulated(absolute_path: PathBuf) -> Self {
+        Self {
+            name: absolute_path
+                .strip_prefix("/dev/")
+                .expect("Cannot strip /dev")
+                .to_string_lossy()
+                .to_string(),
+            fullname: absolute_path,
+            ..Self::default()
+        }
     }
 
     /// Returns true if and only if the device is a storage disk and is not a partition.
