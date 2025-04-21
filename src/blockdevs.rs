@@ -196,15 +196,13 @@ impl BlockDevice {
     /// Determines if the block-device is considered to be physical.
     /// This can be a partition or a disk.
     ///
-    /// A "physical" disk is one that has a path as in `/dev/disk/by-path`
+    /// A "physical" disk is one that has a path as in `/dev/disk/by-path`.
     ///
-    /// The implementation currently is just:
-    /// ```rs
-    /// self.path.is_some()
-    /// ```
+    /// An exception is eMMC drives which for some reason do not come with paths.
     #[must_use]
-    pub const fn is_physical(&self) -> bool {
-        self.path.is_some()
+    pub fn is_physical(&self) -> bool {
+        // TODO: make this const fn once as_bytes is stable
+        self.path.is_some() || matches!(self.name.as_bytes().split_at(6).0, b"mmcblk")
     }
 
     /// Returns true if and only if the device is a partition.
