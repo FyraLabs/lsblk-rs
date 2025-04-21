@@ -153,6 +153,9 @@ impl BlockDevice {
     ///
     /// To manually populate the fields, use [`crate::Populate`].
     ///
+    /// The caller must account for cases where specific fields need to be populated in advance
+    /// before calling subsequent methods (such as [`Self::is_part`] which relies on `partuuid`).
+    ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
     ///
@@ -166,6 +169,14 @@ impl BlockDevice {
     ///
     /// WARN: This function does NOT accept links or relative paths.
     /// If this is unacceptable, use [`BlockDevice::from_path_unpopulated`] instead.
+    ///
+    /// This is similar to [`BlockDevice::from_path`] except that **none of the fields other than
+    /// `name` and `fullname` are populated**.
+    ///
+    /// To manually populate the fields, use [`crate::Populate`].
+    ///
+    /// The caller must account for cases where specific fields need to be populated in advance
+    /// before calling subsequent methods (such as [`Self::is_part`] which relies on `partuuid`).
     ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
