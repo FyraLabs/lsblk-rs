@@ -153,6 +153,9 @@ impl BlockDevice {
     ///
     /// To manually populate the fields, use [`crate::Populate`].
     ///
+    /// The caller must account for cases where specific fields need to be populated in advance
+    /// before calling subsequent methods (such as [`Self::is_part`] which relies on `partuuid`).
+    ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
     ///
@@ -166,6 +169,14 @@ impl BlockDevice {
     ///
     /// WARN: This function does NOT accept links or relative paths.
     /// If this is unacceptable, use [`BlockDevice::from_path_unpopulated`] instead.
+    ///
+    /// This is similar to [`BlockDevice::from_path`] except that **none of the fields other than
+    /// `name` and `fullname` are populated**.
+    ///
+    /// To manually populate the fields, use [`crate::Populate`].
+    ///
+    /// The caller must account for cases where specific fields need to be populated in advance
+    /// before calling subsequent methods (such as [`Self::is_part`] which relies on `partuuid`).
     ///
     /// # Panics
     /// If somehow this isn't in `/dev/`, the function panics.
@@ -196,15 +207,13 @@ impl BlockDevice {
     /// Determines if the block-device is considered to be physical.
     /// This can be a partition or a disk.
     ///
-    /// A "physical" disk is one that has a path as in `/dev/disk/by-path`
+    /// A "physical" disk is one that has a path as in `/dev/disk/by-path`.
     ///
-    /// The implementation currently is just:
-    /// ```rs
-    /// self.path.is_some()
-    /// ```
+    /// An exception is eMMC drives which for some reason do not come with paths.
     #[must_use]
-    pub const fn is_physical(&self) -> bool {
-        self.path.is_some()
+    pub fn is_physical(&self) -> bool {
+        // TODO: make this const fn once as_bytes is stable
+        self.path.is_some() || matches!(self.name.as_bytes().split_at(6).0, b"mmcblk")
     }
 
     /// Returns true if and only if the device is a partition.
