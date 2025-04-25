@@ -213,7 +213,8 @@ impl BlockDevice {
     #[must_use]
     pub fn is_physical(&self) -> bool {
         // TODO: make this const fn once as_bytes is stable
-        self.path.is_some() || matches!(self.name.as_bytes().split_at(6).0, b"mmcblk")
+        self.path.is_some()
+            || 6 < self.name.len() && matches!(self.name.as_bytes().split_at(6).0, b"mmcblk")
     }
 
     /// Returns true if and only if the device is a partition.
