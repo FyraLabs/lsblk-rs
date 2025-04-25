@@ -298,14 +298,26 @@ impl BlockDevice {
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
 #[allow(clippy::unwrap_used)]
-#[test]
-fn test_lsblk_smoke() {
-    let devs = BlockDevice::list().expect("Valid lsblk");
-    for dev in devs.iter().filter(|d| d.is_part()) {
-        println!("{}", dev.capacity().unwrap().unwrap());
-        println!("{:?}", dev.sysfs().unwrap());
-        println!("{}", dev.disk_name().unwrap());
+mod test {
+    use super::*;
+
+    #[cfg(target_os = "linux")]
+    #[test]
+    fn test_lsblk_smoke() {
+        let devs = BlockDevice::list().expect("Valid lsblk");
+        for dev in devs.iter().filter(|d| d.is_part()) {
+            println!("{}", dev.capacity().unwrap().unwrap());
+            println!("{:?}", dev.sysfs().unwrap());
+            println!("{}", dev.disk_name().unwrap());
+        }
+    }
+
+    #[test]
+    fn mmcblk_physical() {
+        let dev = BlockDevice::from_abs_path_unpopulated("/dev/mmcblk1p2".into());
+        assert!(dev.is_physical());
+        let dev = BlockDevice::from_abs_path_unpopulated("/dev/loop0".into());
+        assert!(!dev.is_physical());
     }
 }
